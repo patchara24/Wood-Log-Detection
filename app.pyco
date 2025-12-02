@@ -1,0 +1,74 @@
+from flask import Flask, request, render_template, jsonify
+from PIL import Image
+import io
+import numpy as np
+# สำหรับ Keras/TensorFlow:
+# from tensorflow.keras.models import load_model 
+
+app = Flask(__name__)
+
+# ตั้งค่าขนาดรูปภาพที่โมเดลของคุณคาดหวัง
+IMAGE_SIZE = (224, 224) 
+ai_model = None
+
+try:
+    # ------------------------------------------------------------------
+    # *** 1. UNCOMMENT และแก้ไขส่วนนี้เพื่อโหลดโมเดลของคุณ ***
+    # ------------------------------------------------------------------
+    # ai_model = load_model('wood_model.h5') 
+    # print("AI Model loaded successfully.")
+    
+    # *** ข้อมูลสมมติสำหรับทดสอบ (Dummy Model) ***
+    ai_model = True 
+except Exception as e:
+    print(f"Error loading AI Model: {e}")
+    ai_model = None
+
+@app.route('/')
+def index():
+    """แสดงหน้าเว็บหลัก (Frontend)"""
+    return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    """รับรูปภาพและทำการประมวลผลด้วย AI"""
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+
+    try:
+        if not ai_model:
+            return jsonify({"error": "AI model is not loaded. Check server logs."}), 500
+
+        # 1. อ่านรูปภาพและแปลงเป็นรูปแบบ PIL Image
+        image_bytes = file.read()
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # 2. Pre-processing: ปรับขนาด, แปลงเป็น Array, และ Normalize
+        processed_image = image.resize(IMAGE_SIZE) 
+        image_array = np.array(processed_image) 
+        input_tensor = np.expand_dims(image_array, axis=0) 
+        # input_tensor = input_tensor / 255.0 # ถ้าโมเดลของคุณมีการทำ Normalization
+
+        # 3. **INFERENCE (แทนที่ส่วนนี้ด้วยโค้ดโมเดลจริงของคุณ)**
+        # prediction = ai_model.predict(input_tensor)
+        
+        # *** ข้อมูลสมมติสำหรับทดสอบ ***
+        predicted_count = 58 
+        predicted_percentage = 78.5 
+        # *******************************
+        
+        # 4. ส่งผลลัพธ์กลับในรูปแบบ JSON
+        return jsonify({
+            "success": True,
+            "count": predicted_count, 
+            "percentage": predicted_percentage 
+        })
+
+    except Exception as e:
+        return jsonify({"error": f"Processing failed: {str(e)}"}), 500
+
+if __name__ == '__main__':
+    # รัน Flask server บน http://127.0.0.1:5000/
+    app.run(debug=True)

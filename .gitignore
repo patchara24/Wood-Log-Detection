@@ -1,0 +1,12 @@
+# Python Bytecode
+*.pyc
+*.pyo
+*.pyd
+*.pyco
+
+# Directories
+__pycache__/
+
+# Dependencies
+venv/
+.venv/

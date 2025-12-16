@@ -4,6 +4,7 @@ import numpy as np
 import random
 from flask import Flask, request, render_template, jsonify, Response
 from PIL import Image
+from ultralytics import YOLO
 import io
 import cv2 
 import time 
@@ -26,11 +27,14 @@ def load_ai_model():
     """โหลดโมเดล AI เมื่อเริ่มต้น Server"""
     global ai_model
     try:
-        ai_model = "MOCK_MODE" 
-        logger.info("System Status: AI Model loaded successfully (Mode: %s)", ai_model)
+        ai_model = YOLO('yolo12n.pt')  # ตัวอย่างการโหลดโมเดล YOLO
+        # ai_model = "MOCK_MODE"  # ใช้สำหรับโหมดทดสอบ (ไม่ใช้โมเดลจริง)
+        logger.info("System Status: AI Model loaded successfully (Mode: YOLOv8)")
     except Exception as e:
         logger.error(f"Critical Error: Failed to load AI Model. {e}")
-        ai_model = None
+        # ถ้าโหลดไม่ได้ ให้กลับไปใช้ MOCK MODE เป็น fallback
+        ai_model = "MOCK_MODE" 
+        logger.warning("Falling back to MOCK MODE due to AI model loading failure.")
 
 load_ai_model()
 
@@ -87,6 +91,48 @@ def generate_frames(device_id):
             cv2.putText(frame, f"Count: {result_count}", (10, height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
             cv2.putText(frame, f"Conf: {result_percentage:.2f}%", (10, height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
             time.sleep(0.01) 
+
+        #-- AI Inference Logic for YOLO --#
+        elif isinstance(ai_model, YOLO): 
+            
+            # A. ทำ Inference (ใช้ conf=0.5 เป็นตัวอย่าง, สามารถปรับได้)
+            # verbose=False: ไม่ต้องแสดง output ใน console ทุก frame
+            # stream=True: ใช้ประโยชน์จาก YOLO สำหรับการประมวลผลวิดีโอ/สตรีม
+            results = ai_model(frame, verbose=False, stream=True, conf=0.5) 
+
+            # B. ประมวลผลผลลัพธ์
+            im_bgr = frame # เตรียม frame สำหรับวาดผลลัพธ์
+            result_count = 0
+            result_percentage = 0.0
+
+            for r in results:
+                # 1. วาด Bounding Box ลงบน Frame ด้วยฟังก์ชัน plot() ของ YOLO
+                # (im_bgr จะเก็บภาพที่ถูกวาดทับแล้ว)
+                im_bgr = r.plot() 
+                
+                # 2. นับจำนวนท่อนไม้
+                result_count = len(r.boxes)
+                
+                # 3. คำนวณความมั่นใจเฉลี่ย
+                if result_count > 0:
+                    # r.boxes.conf คือค่าความมั่นใจของแต่ละท่อนไม้
+                    result_percentage = r.boxes.conf.cpu().numpy().mean() * 100 
+                else:
+                    result_percentage = 0.0
+                
+                # Break loop เพราะ YOLO return ผลลัพธ์สำหรับ Frame เดียว
+                break 
+
+            # C. นำ Frame ที่วาดแล้วกลับมาใช้
+            frame = im_bgr
+
+            # D. วาด Text แสดงผลลัพธ์ Count/Confidence ที่มุมล่างซ้าย
+            height, width = frame.shape[:2]
+            cv2.putText(frame, "AI Status: YOLOv8 ONLINE", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(frame, f"Count: {result_count}", (10, height - 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+            cv2.putText(frame, f"Conf: {result_percentage:.2f}%", (10, height - 5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+
+        #-- End of AI Inference Logic --#    
         
         # 3. เข้ารหัส Frame เป็น JPEG
         ret, buffer = cv2.imencode('.jpg', frame)

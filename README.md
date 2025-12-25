@@ -1,70 +1,155 @@
-# 🌲 Wood AI Analytics: Real-Time Timber Counting System
+# 🌲 Wood AI Analytics: Real-Time Timber Detection System
 
-ระบบวิเคราะห์และนับปริมาณท่อนไม้แบบ Real-Time ด้วยปัญญาประดิษฐ์ (YOLOv8) โดยใช้ Python Flask สำหรับ Backend และ Bootstrap/JavaScript สำหรับ Frontend รองรับการทำงานผ่าน Webcam พร้อมฟังก์ชันการเลือกกล้อง (Multi-Camera Support)
+ระบบวิเคราะห์และนับปริมาณท่อนไม้แบบ Real-Time ด้วยปัญญาประดิษฐ์ (YOLO) โดยใช้ **2-Stage AI Pipeline**:
+1. **Bounding Detection** - ตรวจจับและ crop ท่อนไม้
+2. **Segmentation** - วิเคราะห์รายละเอียดและแยกประเภท
 
-## 🚀 คุณสมบัติเด่น (Features)
+รองรับทั้ง **Webcam** และ **ไฟล์วิดีโอ** สำหรับทดสอบจากหน้างานจริง
 
-- **Real-Time Detection:** ประมวลผลภาพจากกล้อง Webcam ด้วยโมเดล YOLOv8 ทันที
-- **Multi-Camera Support:** มี UI สำหรับเลือกกล้องที่ต้องการใช้ผ่าน Settings Modal
-- **Secure Camera Release:** แก้ปัญหาไฟกล้องติดค้างด้วยการสั่ง release ทรัพยากรอย่างชัดเจน
-- **Fallback Mode:** มี `MOCK_MODE` สำหรับทดสอบ UI/UX ในกรณีที่ไม่สามารถโหลดโมเดล AI ได้
+---
 
-## 🛠️ การติดตั้งและการเตรียมความพร้อม (Installation & Setup)
+## ✨ คุณสมบัติเด่น
 
-### 1. โครงสร้างโปรเจกต์
+| Feature | Description |
+|---------|-------------|
+| 🎯 **2-Stage AI Pipeline** | ใช้ `bounding_model.pt` ตรวจจับ + `best.pt` ทำ segmentation |
+| 📷 **Auto Capture** | ถ่ายภาพอัตโนมัติเมื่อตรวจพบภาพนิ่ง |
+| 🎬 **Video File Support** | อัพโหลดวิดีโอจากหน้างานเพื่อทดสอบ |
+| 📊 **Class Percentages** | แสดงผลแยกตาม class พร้อมเปอร์เซ็นต์ |
+| 🖼️ **Mask Export** | บันทึก mask images แยกตาม class |
+| � **Multi-Camera** | รองรับการเลือกกล้องหลายตัว |
 
-## จัดโครงสร้างไฟล์ตามที่กำหนด:
+---
+
+## 📁 โครงสร้างโปรเจค
 
 ```
-/wood_log_project
-├── app.py
-├── yolo12n.pt <-- ไฟล์โมเดล AI ของคุณ (สำคัญ)
+wood_ai_project/
+├── app.py                    # Flask Backend + AI Pipeline
+├── bounding_model.pt         # โมเดลตรวจจับ Bounding Box
+├── best.pt                   # โมเดล Segmentation
 ├── templates/
-│ └── index.html
-└── static/
-  ├── script.js
-  └── styles.css
-
+│   └── index.html            # หน้าเว็บหลัก
+├── static/
+│   ├── script.js             # Frontend Logic
+│   └── styles.css            # CSS Styles
+├── videos/                   # เก็บวิดีโอที่อัพโหลด
+└── captures/                 # ผลลัพธ์การประมวลผล
+    ├── original_*.jpg        # ภาพต้นฉบับ
+    ├── cropped/              # ภาพที่ crop แล้ว
+    ├── segmented/            # ภาพ segmentation overlay
+    └── masks/                # Mask images แยก class
 ```
 
-### 2. ติดตั้ง Python และแพ็กเกจ
+---
 
-เปิด Terminal หรือ PowerShell ในโฟลเดอร์โปรเจกต์ของคุณ แล้วรันคำสั่งเพื่อติดตั้ง Dependencies ที่จำเป็น:
+## 🛠️ การติดตั้ง
 
+### ความต้องการของระบบ
 - Python 3.8+
-- pip (Python Package Installer)
-- Webcam ที่ใช้งานได้
+- Webcam (ถ้าใช้กล้อง)
+- GPU (แนะนำ สำหรับความเร็ว)
 
-โปรเจกต์นี้ใช้ไลบรารีที่สำคัญหลายตัว สามารถติดตั้งทั้งหมดได้ด้วยคำสั่งเดียว:
+### ติดตั้ง Dependencies
 
 ```bash
-# แนะนำให้สร้าง Virtual Environment ก่อนเสมอ
+# สร้าง Virtual Environment
 python -m venv venv
-source venv/bin/activate  # สำหรับ Linux/macOS
-# venv\Scripts\activate   # สำหรับ Windows
 
-# ติดตั้งไลบรารีที่จำเป็น
+# Activate (Windows)
+venv\Scripts\activate
+
+# Activate (Linux/macOS)
+source venv/bin/activate
+
+# ติดตั้งไลบรารี
 pip install flask opencv-python ultralytics numpy Pillow
 ```
 
-## 💻 การรันโปรเจกต์ (How to Run)
+---
 
-1.  ตรวจสอบให้แน่ใจว่าคุณได้ติดตั้ง Dependencies ครบถ้วนแล้ว
-2.  รันไฟล์ `app.py` ด้วยคำสั่ง:
+## 🖥️ การใช้งาน
 
-    ```bash
-    python app.py
-    ```
+### 1. รันเซิร์ฟเวอร์
 
-3.  เปิด Web Browser และเข้าสู่ที่อยู่: `http://127.0.0.1:5000/`
-4.  คลิกปุ่ม **"เริ่มการวิเคราะห์"** และอนุญาตให้เว็บไซต์เข้าถึงกล้องของคุณ
+```bash
+cd wood_ai_project
+python app.py
+```
 
-## 🔍 คำอธิบายโค้ดที่สำคัญ (Key Code Explanation)
+เปิดเบราว์เซอร์ไปที่: **http://127.0.0.1:5000**
 
-| ไฟล์/ส่วน       | ฟังก์ชัน             | คำอธิบาย                                                                                   |
-| :-------------- | :------------------- | :----------------------------------------------------------------------------------------- |
-| **`app.py`**    | `generate_frames()`  | ดึงภาพจากกล้อง, ประมวลผลด้วย YOLO, วาด Bounding Box, และส่ง Frame ออกไปแบบ Multi-part JPEG |
-| **`app.py`**    | `/video_feed`        | Endpoint ที่รับ `device_id` และเริ่มต้น `generate_frames` เพื่อสร้าง Video Stream          |
-| **`app.py`**    | `/release_camera`    | API (POST) สำหรับสั่งให้ `cv2.VideoCapture` ปล่อยทรัพยากรกล้องอย่างชัดเจน                  |
-| **`script.js`** | `getCameraDevices()` | ใช้ Web MediaDevices API เพื่อดึงรายชื่อกล้องสำหรับ Modal                                  |
-| **`script.js`** | `startStreaming()`   | ควบคุมสถานะ Start/Stop สตรีมมิ่ง และเรียก API `/release_camera` เมื่อหยุด                  |
+### 2. เลือกแหล่งวิดีโอ
+
+#### ใช้กล้อง Webcam
+1. เลือก **กล้อง Webcam**
+2. กด **เริ่มการวิเคราะห์**
+3. ระบบจะถ่ายภาพอัตโนมัติเมื่อภาพนิ่ง
+
+#### ใช้ไฟล์วิดีโอ
+1. เลือก **ไฟล์วิดีโอ**
+2. กด **อัพโหลด** เพื่อเลือกไฟล์ (MP4, AVI, MOV, MKV, WebM)
+3. เลือกวิดีโอจาก dropdown
+4. กด **เริ่มการวิเคราะห์**
+
+---
+
+## ⚙️ การตั้งค่า (Configuration)
+
+แก้ไขค่าเหล่านี้ใน `app.py`:
+
+```python
+STABILITY_THRESHOLD = 0.5    # ค่าความนิ่งของภาพ (ยิ่งต่ำ = ไวกว่า)
+STABILITY_FRAMES = 10        # จำนวน frame นิ่งก่อนถ่าย
+CAPTURE_COOLDOWN = 3.0       # วินาทีระหว่างการถ่ายแต่ละครั้ง
+BOUNDING_CONF = 0.5          # Confidence สำหรับ bounding
+SEGMENT_CONF = 0.3           # Confidence สำหรับ segmentation
+```
+
+---
+
+## 🔌 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | หน้าเว็บหลัก |
+| `/video_feed` | GET | Video stream จากกล้อง |
+| `/video_file_feed` | GET | Video stream จากไฟล์ |
+| `/capture` | POST | ถ่ายภาพแบบ manual |
+| `/results` | GET | ดึงผลลัพธ์ล่าสุด |
+| `/upload_video` | POST | อัพโหลดไฟล์วิดีโอ |
+| `/list_videos` | GET | รายการวิดีโอที่อัพโหลด |
+| `/release_camera` | POST | ปล่อยทรัพยากรกล้อง |
+
+---
+
+## 📊 ผลลัพธ์
+
+ระบบจะบันทึกผลลัพธ์ลงโฟลเดอร์ `captures/`:
+
+- **original_*.jpg** - ภาพต้นฉบับที่ถ่าย
+- **cropped/** - ภาพที่ crop จาก bounding box
+- **segmented/** - ภาพที่มี segmentation overlay
+- **masks/** - Mask images แยกตาม class (PNG)
+
+---
+
+## 🧠 AI Pipeline Flow
+
+```
+┌─────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   กล้อง/    │    │  Frame Stability │    │ bounding_model  │
+│   วิดีโอ    │───▶│    Detection     │───▶│     .pt         │
+└─────────────┘    └──────────────────┘    └────────┬────────┘
+                                                    │
+                   ┌──────────────────┐    ┌────────▼────────┐
+                   │   บันทึก Mask    │◀───│    best.pt      │
+                   │   + แสดงผล %     │    │  Segmentation   │
+                   └──────────────────┘    └─────────────────┘
+```
+
+---
+
+## 📝 License
+
+© 2025 WoodAnalytics Corporation. All rights reserved.

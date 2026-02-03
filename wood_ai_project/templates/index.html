@@ -45,7 +45,8 @@
         <div class="col-lg-10">
           <div class="text-center mb-5">
             <h2 class="fw-bold text-dark">
-              ระบบวิเคราะห์ปริมาณไม้ด้วยปัญญาประดิษฐ์ (Real-Time)
+              AI-Vision Log Grading System: Automated Wood Classification for
+              Smart Timber Processing
             </h2>
             <p class="text-muted">
               AI-Powered Timber Quantity Estimation System (Webcam)
@@ -76,16 +77,29 @@
                   <i class="bi bi-toggles me-1"></i>เลือกแหล่งวิดีโอ
                 </h6>
                 <div class="btn-group w-100" role="group">
-                  <input type="radio" class="btn-check" name="sourceType" id="sourceCamera" value="camera" checked>
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="sourceType"
+                    id="sourceCamera"
+                    value="camera"
+                    checked
+                  />
                   <label class="btn btn-outline-primary" for="sourceCamera">
                     <i class="bi bi-camera-video me-1"></i>กล้อง Webcam
                   </label>
-                  <input type="radio" class="btn-check" name="sourceType" id="sourceVideo" value="video">
+                  <input
+                    type="radio"
+                    class="btn-check"
+                    name="sourceType"
+                    id="sourceVideo"
+                    value="video"
+                  />
                   <label class="btn btn-outline-primary" for="sourceVideo">
                     <i class="bi bi-file-play me-1"></i>ไฟล์วิดีโอ
                   </label>
                 </div>
-                
+
                 <!-- Video File Section (hidden by default) -->
                 <div id="videoFileSection" class="mt-3 d-none">
                   <div class="row g-2">
@@ -95,15 +109,19 @@
                       </select>
                     </div>
                     <div class="col-md-4">
-                      <button class="btn btn-outline-secondary w-100" type="button" 
-                              data-bs-toggle="modal" data-bs-target="#uploadVideoModal">
+                      <button
+                        class="btn btn-outline-secondary w-100"
+                        type="button"
+                        data-bs-toggle="modal"
+                        data-bs-target="#uploadVideoModal"
+                      >
                         <i class="bi bi-upload me-1"></i>อัพโหลด
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div class="row mt-4 align-items-stretch">
                 <div class="col-md-7 border-end-md">
                   <h6 class="text-uppercase text-muted fs-7 mb-3 fw-bold">
@@ -176,7 +194,7 @@
                           <div
                             class="p-3 bg-success-subtle rounded border border-success-subtle"
                           >
-                            <small class="text-success fw-bold text-uppercase"
+                            <small class="text-success fw-bold text-uppercase" data-i18n="results.objectCount"
                               >จำนวนวัตถุ</small
                             >
                             <h2
@@ -185,14 +203,14 @@
                             >
                               0
                             </h2>
-                            <small class="text-muted">ชิ้น</small>
+                            <small class="text-muted" data-i18n="results.pieces">ชิ้น</small>
                           </div>
                         </div>
                         <div class="col-6">
                           <div
                             class="p-3 bg-primary-subtle rounded border border-primary-subtle"
                           >
-                            <small class="text-primary fw-bold text-uppercase"
+                            <small class="text-primary fw-bold text-uppercase" data-i18n="results.status"
                               >สถานะ</small
                             >
                             <h4
@@ -201,18 +219,24 @@
                             >
                               -
                             </h4>
-                            <small class="text-muted">Auto Capture</small>
+                            <small class="text-muted" data-i18n="results.autoCapture">Auto Capture</small>
                           </div>
                         </div>
                       </div>
-                      
+
                       <!-- Class Results Section -->
                       <div class="mt-3">
                         <h6 class="text-uppercase text-muted fs-7 mb-2 fw-bold">
                           <i class="bi bi-pie-chart me-1"></i>ผลแยกตาม Class
                         </h6>
-                        <div id="classResults" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
-                          <p class="text-muted small mb-0">รอผลการประมวลผล...</p>
+                        <div
+                          id="classResults"
+                          class="border rounded p-2"
+                          style="max-height: 200px; overflow-y: auto"
+                        >
+                          <p class="text-muted small mb-0">
+                            รอผลการประมวลผล...
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -230,6 +254,68 @@
                 >
                 <small class="text-muted">Version 1.0.2 (Webcam)</small>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="col-lg-10 mt-4">
+          <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white border-bottom py-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 fw-bold text-primary-dark">
+                  <i class="bi bi-clock-history me-2"></i><span data-i18n="history.title">ประวัติการวิเคราะห์</span>
+                </h6>
+                <div class="d-flex gap-2">
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-outline-success" id="exportCSV" title="Export CSV">
+                      <i class="bi bi-filetype-csv"></i> CSV
+                    </button>
+                    <button class="btn btn-outline-primary" id="exportExcel" title="Export Excel">
+                      <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-outline-danger" id="exportPDF" title="Export PDF">
+                      <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </button>
+                  </div>
+                  <button class="btn btn-sm btn-outline-secondary" id="refreshHistory" title="Refresh">
+                    <i class="bi bi-arrow-clockwise"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" id="clearHistory" title="Clear All">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                <table class="table table-hover table-striped mb-0" id="historyTable">
+                  <thead class="table-light sticky-top">
+                    <tr>
+                      <th style="width: 60px;">#</th>
+                      <th style="width: 180px;" data-i18n="history.datetime">วันที่-เวลา</th>
+                      <th style="width: 100px;" data-i18n="history.objects">จำนวน</th>
+                      <th data-i18n="history.classes">ผลแยก Class</th>
+                      <th style="width: 80px;" data-i18n="history.actions">ดำเนินการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyBody">
+                    <tr id="historyEmptyRow">
+                      <td colspan="5" class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                        <span data-i18n="history.empty">ยังไม่มีประวัติการวิเคราะห์</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card-footer bg-light py-2">
+              <small class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                <span data-i18n="history.footer">ประวัติจะถูกบันทึกอัตโนมัติหลังการวิเคราะห์</span>
+                <span id="historyCount" class="float-end fw-bold">0 รายการ</span>
+              </small>
             </div>
           </div>
         </div>
@@ -257,15 +343,27 @@
             ></button>
           </div>
           <div class="modal-body">
-            <p class="text-muted small">
+            <!-- Language Selection -->
+            <div class="mb-4">
+              <label class="form-label fw-bold" data-i18n="settings.language">ภาษา / Language</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="langSelect" id="langTH" value="th" checked />
+                <label class="btn btn-outline-primary" for="langTH">🇹🇭 ไทย</label>
+                <input type="radio" class="btn-check" name="langSelect" id="langEN" value="en" />
+                <label class="btn btn-outline-primary" for="langEN" id="langENLabel">🇬🇧 English</label>
+              </div>
+            </div>
+            <hr />
+            <!-- Camera Selection -->
+            <p class="text-muted small" data-i18n="settings.cameraDescription">
               กรุณาเลือกกล้องที่ต้องการใช้สำหรับการวิเคราะห์ Real-Time
             </p>
             <div class="mb-3">
-              <label for="cameraSelect" class="form-label"
+              <label for="cameraSelect" class="form-label" data-i18n="settings.selectCamera"
                 >เลือกอุปกรณ์กล้อง</label
               >
               <select class="form-select" id="cameraSelect">
-                <option>กำลังโหลดรายชื่อกล้อง...</option>
+                <option data-i18n="settings.loadingCameras">กำลังโหลดรายชื่อกล้อง...</option>
               </select>
             </div>
           </div>
@@ -316,17 +414,29 @@
               เลือกไฟล์วิดีโอจากหน้างานเพื่อทดสอบระบบ AI
             </p>
             <div class="mb-3">
-              <label for="videoFileInput" class="form-label">เลือกไฟล์วิดีโอ</label>
-              <input class="form-control" type="file" id="videoFileInput" 
-                     accept=".mp4,.avi,.mov,.mkv,.webm">
+              <label for="videoFileInput" class="form-label"
+                >เลือกไฟล์วิดีโอ</label
+              >
+              <input
+                class="form-control"
+                type="file"
+                id="videoFileInput"
+                accept=".mp4,.avi,.mov,.mkv,.webm"
+              />
               <div class="form-text">รองรับไฟล์: MP4, AVI, MOV, MKV, WebM</div>
             </div>
             <div id="uploadProgress" class="d-none">
               <div class="progress mb-2">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                     role="progressbar" style="width: 0%" id="uploadProgressBar"></div>
+                <div
+                  class="progress-bar progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  style="width: 0%"
+                  id="uploadProgressBar"
+                ></div>
               </div>
-              <small class="text-muted" id="uploadStatus">กำลังอัพโหลด...</small>
+              <small class="text-muted" id="uploadStatus"
+                >กำลังอัพโหลด...</small
+              >
             </div>
           </div>
           <div class="modal-footer">

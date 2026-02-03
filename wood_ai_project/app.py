@@ -2,13 +2,22 @@ import os
 import logging
 import numpy as np
 import random
-from flask import Flask, request, render_template, jsonify, Response
+import json
+import csv
+from io import BytesIO, StringIO
+from flask import Flask, request, render_template, jsonify, Response, send_file
 from PIL import Image
 from ultralytics import YOLO
 import io
 import cv2 
 import time 
 from datetime import datetime
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
+
 
 # ------------------------------------------------------
 # 1. System Configuration & Logging (ตั้งค่าระบบ)
@@ -31,8 +40,10 @@ CROPPED_DIR = os.path.join(CAPTURES_DIR, 'cropped')
 SEGMENTED_DIR = os.path.join(CAPTURES_DIR, 'segmented')
 MASKS_DIR = os.path.join(CAPTURES_DIR, 'masks')
 VIDEOS_DIR = os.path.join(os.path.dirname(__file__), 'videos')  # สำหรับเก็บวิดีโอทดสอบ
+EXPORTS_DIR = os.path.join(os.path.dirname(__file__), 'exports')  # สำหรับเก็บไฟล์ export
+HISTORY_FILE = os.path.join(CAPTURES_DIR, 'analysis_history.json')  # ไฟล์เก็บประวัติ
 
-for dir_path in [CAPTURES_DIR, CROPPED_DIR, SEGMENTED_DIR, MASKS_DIR, VIDEOS_DIR]:
+for dir_path in [CAPTURES_DIR, CROPPED_DIR, SEGMENTED_DIR, MASKS_DIR, VIDEOS_DIR, EXPORTS_DIR]:
     os.makedirs(dir_path, exist_ok=True)
 
 # Global state for video source
@@ -70,6 +81,45 @@ def load_ai_models():
         segment_model = None
 
 load_ai_models()
+
+# ------------------------------------------------------
+# 2.5. History Management (จัดการประวัติการวิเคราะห์)
+# ------------------------------------------------------
+
+def load_history():
+    """โหลดประวัติการวิเคราะห์จากไฟล์"""
+    if not os.path.exists(HISTORY_FILE):
+        return []
+    try:
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return []
+
+def save_to_history(result_data):
+    """บันทึกผลการวิเคราะห์ลง history file"""
+    history = load_history()
+    
+    # สร้าง ID ใหม่
+    max_id = max([h.get('id', 0) for h in history], default=0)
+    result_data['id'] = max_id + 1
+    
+    # เก็บเฉพาะข้อมูลที่จำเป็น (ไม่เก็บ path เพื่อประหยัดพื้นที่)
+    history_entry = {
+        'id': result_data['id'],
+        'timestamp': result_data['timestamp'],
+        'total_objects': result_data['total_objects'],
+        'class_percentages': result_data['class_percentages'],
+        'crops_count': len(result_data.get('crops', []))
+    }
+    history.append(history_entry)
+    
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        logger.info(f"Saved to history: ID {history_entry['id']}")
+    except IOError as e:
+        logger.error(f"Failed to save history: {e}")
 
 # ------------------------------------------------------
 # 3. Frame Stability Detection (ตรวจจับภาพนิ่ง)
@@ -232,6 +282,7 @@ def process_captured_image(image, timestamp_str):
             }
     
     latest_result = result_data
+    save_to_history(result_data)  # บันทึกลงประวัติ
     logger.info(f"Processing complete. Total crops: {crop_count}, Total segments: {total_segments}")
     logger.info(f"Class distribution: {result_data['class_percentages']}")
     
@@ -400,6 +451,180 @@ def release_camera():
         logger.info("Camera resource explicitly released by user action.")
         return jsonify({'success': True, 'message': 'Camera released successfully'})
     return jsonify({'success': False, 'message': 'Camera was not active'})
+
+# ------------------------------------------------------
+# History & Export API (ประวัติและส่งออกรายงาน)
+# ------------------------------------------------------
+
+@app.route('/history')
+def get_history():
+    """ดึงประวัติการวิเคราะห์ทั้งหมด"""
+    history = load_history()
+    return jsonify({'success': True, 'history': history, 'total': len(history)})
+
+@app.route('/history/<int:record_id>', methods=['DELETE'])
+def delete_history_record(record_id):
+    """ลบประวัติเฉพาะ record"""
+    history = load_history()
+    history = [h for h in history if h.get('id') != record_id]
+    
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        return jsonify({'success': True, 'message': f'Record {record_id} deleted'})
+    except IOError as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/history/clear', methods=['DELETE'])
+def clear_history():
+    """ลบประวัติทั้งหมด"""
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f)
+        return jsonify({'success': True, 'message': 'All history cleared'})
+    except IOError as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/export/csv')
+def export_csv():
+    """Export ประวัติเป็น CSV"""
+    history = load_history()
+    
+    output = StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow(['ID', 'Timestamp', 'Total Objects', 'Classes', 'Crops Count'])
+    
+    for h in history:
+        classes_str = ', '.join([f"{k}: {v['count']} ({v['percentage']}%)" 
+                                 for k, v in h.get('class_percentages', {}).items()])
+        writer.writerow([
+            h.get('id', ''),
+            h.get('timestamp', ''),
+            h.get('total_objects', 0),
+            classes_str,
+            h.get('crops_count', 0)
+        ])
+    
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=analysis_history.csv'}
+    )
+
+@app.route('/export/excel')
+def export_excel():
+    """Export ประวัติเป็น Excel"""
+    history = load_history()
+    
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Analysis History"
+    
+    # Header styling
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    headers = ['ID', 'Timestamp', 'Total Objects', 'Classes', 'Crops Count']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+    
+    # Data rows
+    for row_num, h in enumerate(history, 2):
+        classes_str = ', '.join([f"{k}: {v['count']} ({v['percentage']}%)" 
+                                 for k, v in h.get('class_percentages', {}).items()])
+        ws.cell(row=row_num, column=1, value=h.get('id', '')).border = thin_border
+        ws.cell(row=row_num, column=2, value=h.get('timestamp', '')).border = thin_border
+        ws.cell(row=row_num, column=3, value=h.get('total_objects', 0)).border = thin_border
+        ws.cell(row=row_num, column=4, value=classes_str).border = thin_border
+        ws.cell(row=row_num, column=5, value=h.get('crops_count', 0)).border = thin_border
+    
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 8
+    ws.column_dimensions['B'].width = 20
+    ws.column_dimensions['C'].width = 15
+    ws.column_dimensions['D'].width = 40
+    ws.column_dimensions['E'].width = 15
+    
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='analysis_history.xlsx'
+    )
+
+@app.route('/export/pdf')
+def export_pdf():
+    """Export ประวัติเป็น PDF"""
+    history = load_history()
+    
+    output = BytesIO()
+    p = canvas.Canvas(output, pagesize=A4)
+    width, height = A4
+    
+    # Title
+    p.setFont("Helvetica-Bold", 18)
+    p.drawString(1*inch, height - 1*inch, "WoodAnalytics - Analysis History Report")
+    
+    p.setFont("Helvetica", 10)
+    p.drawString(1*inch, height - 1.3*inch, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    p.drawString(1*inch, height - 1.5*inch, f"Total Records: {len(history)}")
+    
+    # Table header
+    y = height - 2*inch
+    p.setFont("Helvetica-Bold", 10)
+    p.drawString(1*inch, y, "ID")
+    p.drawString(1.5*inch, y, "Timestamp")
+    p.drawString(3.5*inch, y, "Objects")
+    p.drawString(4.5*inch, y, "Classes")
+    
+    # Table data
+    p.setFont("Helvetica", 9)
+    y -= 0.3*inch
+    
+    for h in history:
+        if y < 1*inch:  # New page if needed
+            p.showPage()
+            y = height - 1*inch
+            p.setFont("Helvetica", 9)
+        
+        classes_str = ', '.join([f"{k}:{v['count']}" 
+                                 for k, v in h.get('class_percentages', {}).items()])
+        if len(classes_str) > 30:
+            classes_str = classes_str[:27] + "..."
+        
+        p.drawString(1*inch, y, str(h.get('id', '')))
+        p.drawString(1.5*inch, y, h.get('timestamp', '')[:15])
+        p.drawString(3.5*inch, y, str(h.get('total_objects', 0)))
+        p.drawString(4.5*inch, y, classes_str)
+        y -= 0.25*inch
+    
+    p.save()
+    output.seek(0)
+    
+    return send_file(
+        output,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='analysis_history.pdf'
+    )
 
 # ------------------------------------------------------
 # Video File Support (รองรับไฟล์วิดีโอ)

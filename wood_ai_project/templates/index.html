@@ -27,30 +27,79 @@
       href="{{ url_for('static', filename='styles.css') }}"
     />
   </head>
-  <body class="bg-light">
+  <body class="bg-light" data-theme="light">
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toastContainer" style="z-index: 9999;"></div>
+
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark-blue shadow-sm">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-          <i class="bi bi-layers-half"></i>
+          <i class="bi bi-layers-half fs-4 brand-icon"></i>
           <span class="fw-semibold"
             >WoodAnalytics
             <small class="opacity-75 fs-6 fw-light">Enterprise</small></span
           >
         </a>
+        <!-- Dark Mode Toggle -->
+        <div class="d-flex align-items-center gap-3">
+          <button
+            class="btn btn-sm btn-outline-light d-flex align-items-center gap-2"
+            id="darkModeToggle"
+            title="Toggle Dark Mode"
+          >
+            <i class="bi bi-moon-stars" id="darkModeIcon"></i>
+            <span class="d-none d-md-inline" id="darkModeText">Dark</span>
+          </button>
+        </div>
       </div>
     </nav>
 
     <div class="container my-5">
       <div class="row justify-content-center">
         <div class="col-lg-10">
-          <div class="text-center mb-5">
-            <h2 class="fw-bold text-dark">
-              AI-Vision Log Grading System: Automated Wood Classification for
-              Smart Timber Processing
-            </h2>
-            <p class="text-muted">
-              AI-Powered Timber Quantity Estimation System (Webcam)
+          <!-- Enhanced Hero Section -->
+          <div class="text-center mb-5 hero-section">
+            <div class="hero-badge mb-3">
+              <span class="badge bg-gradient-primary px-3 py-2">
+                <i class="bi bi-stars me-1"></i> AI-Powered System
+              </span>
+            </div>
+            <h1 class="fw-bold hero-title mb-3">
+              <span class="gradient-text">AI-Vision</span> Log Grading System
+            </h1>
+            <p class="lead text-muted hero-subtitle mb-4">
+              <span class="typing-text">Automated Wood Classification for Smart Timber Processing</span>
             </p>
+            <!-- Quick Stats -->
+            <div class="row g-3 justify-content-center mb-4">
+              <div class="col-auto">
+                <div class="stat-card px-4 py-3 rounded-3">
+                  <div class="stat-icon text-success mb-1">
+                    <i class="bi bi-cpu fs-4"></i>
+                  </div>
+                  <div class="stat-value fw-bold" id="statAccuracy">99.5%</div>
+                  <div class="stat-label text-muted small">Accuracy</div>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="stat-card px-4 py-3 rounded-3">
+                  <div class="stat-icon text-primary mb-1">
+                    <i class="bi bi-lightning-charge fs-4"></i>
+                  </div>
+                  <div class="stat-value fw-bold" id="statSpeed">0.3s</div>
+                  <div class="stat-label text-muted small">Processing</div>
+                </div>
+              </div>
+              <div class="col-auto">
+                <div class="stat-card px-4 py-3 rounded-3">
+                  <div class="stat-icon text-warning mb-1">
+                    <i class="bi bi-camera-video fs-4"></i>
+                  </div>
+                  <div class="stat-value fw-bold" id="statRealtime">Real-time</div>
+                  <div class="stat-label text-muted small">Detection</div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="card shadow-sm border-0 rounded-3">
@@ -290,13 +339,13 @@
             <div class="card-body p-0">
               <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                 <table class="table table-hover table-striped mb-0" id="historyTable">
-                  <thead class="table-light sticky-top">
+                  <thead class="history-thead sticky-top" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);">
                     <tr>
-                      <th style="width: 60px;">#</th>
-                      <th style="width: 180px;" data-i18n="history.datetime">วันที่-เวลา</th>
-                      <th style="width: 100px;" data-i18n="history.objects">จำนวน</th>
-                      <th data-i18n="history.classes">ผลแยก Class</th>
-                      <th style="width: 80px;" data-i18n="history.actions">ดำเนินการ</th>
+                      <th style="width: 60px; color: #ffffff; background: transparent;">#</th>
+                      <th style="width: 180px; color: #ffffff; background: transparent;" data-i18n="history.datetime">วันที่-เวลา</th>
+                      <th style="width: 100px; color: #ffffff; background: transparent;" data-i18n="history.objects">จำนวน</th>
+                      <th style="color: #ffffff; background: transparent;" data-i18n="history.classes">ผลแยก Class</th>
+                      <th style="width: 80px; color: #ffffff; background: transparent;" data-i18n="history.actions">ดำเนินการ</th>
                     </tr>
                   </thead>
                   <tbody id="historyBody">

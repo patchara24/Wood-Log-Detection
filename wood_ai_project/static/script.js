@@ -925,3 +925,168 @@ fetchLatestResults = async function() {
   // Refresh history table when new results come in
   loadHistory();
 };
+
+// ------------------------------------------------------------------
+// 9. Dark Mode Toggle (สลับธีมมืด/สว่าง)
+// ------------------------------------------------------------------
+
+function initDarkMode() {
+  const darkModeToggle = document.getElementById('darkModeToggle');
+  const darkModeIcon = document.getElementById('darkModeIcon');
+  const darkModeText = document.getElementById('darkModeText');
+  const body = document.body;
+  
+  // Load saved theme
+  const savedTheme = localStorage.getItem('woodai-theme') || 'light';
+  setTheme(savedTheme);
+  
+  if (darkModeToggle) {
+    darkModeToggle.addEventListener('click', () => {
+      const currentTheme = body.getAttribute('data-theme') || 'light';
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      setTheme(newTheme);
+      localStorage.setItem('woodai-theme', newTheme);
+      
+      // Show toast
+      showToast(
+        newTheme === 'dark' ? '🌙 Dark Mode Enabled' : '☀️ Light Mode Enabled',
+        'info'
+      );
+    });
+  }
+  
+  function setTheme(theme) {
+    body.setAttribute('data-theme', theme);
+    
+    if (darkModeIcon) {
+      darkModeIcon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars';
+    }
+    if (darkModeText) {
+      darkModeText.textContent = theme === 'dark' ? 'Light' : 'Dark';
+    }
+  }
+}
+
+// ------------------------------------------------------------------
+// 10. Toast Notifications (แจ้งเตือนแบบ Toast)
+// ------------------------------------------------------------------
+
+function showToast(message, type = 'info', duration = 3000) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+  
+  const toastId = 'toast-' + Date.now();
+  const iconMap = {
+    success: 'bi-check-circle-fill',
+    error: 'bi-x-circle-fill',
+    warning: 'bi-exclamation-triangle-fill',
+    info: 'bi-info-circle-fill'
+  };
+  
+  const toastHTML = `
+    <div id="${toastId}" class="toast toast-${type} show" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-body d-flex align-items-center gap-2">
+        <i class="bi ${iconMap[type] || iconMap.info}"></i>
+        <span>${message}</span>
+        <button type="button" class="btn-close btn-close-white ms-auto" data-toast-dismiss="${toastId}"></button>
+      </div>
+    </div>
+  `;
+  
+  container.insertAdjacentHTML('beforeend', toastHTML);
+  
+  const toastEl = document.getElementById(toastId);
+  
+  // Close button handler
+  const closeBtn = toastEl.querySelector('[data-toast-dismiss]');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => hideToast(toastId));
+  }
+  
+  // Auto-hide after duration
+  setTimeout(() => hideToast(toastId), duration);
+}
+
+function hideToast(toastId) {
+  const toast = document.getElementById(toastId);
+  if (toast) {
+    toast.classList.add('hiding');
+    setTimeout(() => toast.remove(), 300);
+  }
+}
+
+// ------------------------------------------------------------------
+// 11. Animated Counters (ตัวเลขนับขึ้น)
+// ------------------------------------------------------------------
+
+function animateValue(element, start, end, duration = 1000) {
+  if (!element) return;
+  
+  const startTime = performance.now();
+  const isInteger = Number.isInteger(end);
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    
+    // Easing function (ease-out)
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = start + (end - start) * easeOut;
+    
+    element.textContent = isInteger ? Math.round(current) : current.toFixed(1);
+    element.classList.add('counting');
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      element.classList.remove('counting');
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
+function animateCountUp(selector, endValue, suffix = '') {
+  const element = document.querySelector(selector);
+  if (!element) return;
+  
+  const numericValue = parseFloat(endValue);
+  if (isNaN(numericValue)) {
+    element.textContent = endValue;
+    return;
+  }
+  
+  const startTime = performance.now();
+  const duration = 1500;
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const current = numericValue * easeOut;
+    
+    element.textContent = (Number.isInteger(numericValue) ? Math.round(current) : current.toFixed(1)) + suffix;
+    
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    }
+  }
+  
+  requestAnimationFrame(update);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  initDarkMode();
+  
+  // Animate hero stats on load
+  setTimeout(() => {
+    animateCountUp('#statAccuracy', 99.5, '%');
+  }, 800);
+});
+
+// Override alert with toast for better UX
+const originalAlert = window.alert;
+window.alert = function(message) {
+  showToast(message, 'info', 4000);
+};
